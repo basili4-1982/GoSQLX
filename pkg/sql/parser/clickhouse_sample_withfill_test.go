@@ -47,3 +47,22 @@ func TestClickHouseSampleAndWithFillRoundtrip(t *testing.T) {
 		})
 	}
 }
+
+// Regression: ClickHouse array/tuple element access via dot-notation (d.1, t.2)
+// must parse. Previously a numeric component after '.' raised E2004.
+func TestClickHouseArrayElementAccess(t *testing.T) {
+	tests := []string{
+		`SELECT d.1 FROM t ARRAY JOIN arr AS d`,
+		`SELECT a.x FROM t ARRAY JOIN a`,
+		`SELECT arr[1] FROM t`,
+	}
+	for _, sql := range tests {
+		tree, err := gosqlx.ParseWithDialect(sql, keywords.DialectClickHouse)
+		if err != nil {
+			t.Fatalf("parse %q failed: %v", sql, err)
+		}
+		if got := tree.SQL(); got != sql {
+			t.Errorf("SQL() = %q, want %q", got, sql)
+		}
+	}
+}
